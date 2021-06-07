@@ -203,6 +203,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         override
         nonReentrant
         updateVault(msg.sender)
+        checkDeviation
         returns (
             uint256 shares,
             uint256 amount0,
@@ -211,11 +212,6 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     {
         require(amount0Desired > 0 && amount1Desired > 0, "ANV");
 
-        // Check price has not moved a lot recently. This mitigates price
-        // manipulation during rebalance and also prevents placing orders
-        // when it's too volatile.
-        
-        pool03.checkDeviation(ISorbettoStrategy(strategy).maxTwapDeviation(), ISorbettoStrategy(strategy).twapDuration());
         // compute the liquidity amount
         uint128 liquidity = pool03.liquidityForAmounts(amount0Desired, amount1Desired, tickLower, tickUpper);
         
@@ -241,7 +237,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         external
         override
         nonReentrant
-        updateVault(msg.sender) 
+        updateVault(msg.sender)
+        checkDeviation
         returns (
             uint256 amount0,
             uint256 amount1
@@ -249,10 +246,6 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     {
         require(shares > 0, "S");
 
-        // Check price has not moved a lot recently. This mitigates price
-        // manipulation during rebalance and also prevents placing orders
-        // when it's too volatile.
-        pool03.checkDeviation(ISorbettoStrategy(strategy).maxTwapDeviation(), ISorbettoStrategy(strategy).twapDuration());
 
         (amount0, amount1) = pool03.burnLiquidityShare(tickLower, tickUpper, totalSupply(), shares,  msg.sender);
         
@@ -262,13 +255,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     }
     
     /// @inheritdoc ISorbettoFragola
-    function rerange() external override nonReentrant updateVault(address(0)) {
-        
-        // Check price has not moved a lot recently. This mitigates price
-        // manipulation during rebalance and also prevents placing orders
-        // when it's too volatile.
-        
-        pool03.checkDeviation(ISorbettoStrategy(strategy).maxTwapDeviation(), ISorbettoStrategy(strategy).twapDuration());
+    function rerange() external override nonReentrant updateVault(address(0)) checkDeviation {
 
         //Burn all liquidity from pool to rerange for Sorbetto's balances.
         pool03.burnAllLiquidity(tickLower, tickUpper);
@@ -299,12 +286,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     }
 
     /// @inheritdoc ISorbettoFragola
-    function rebalance() external override nonReentrant updateVault(address(0)) {
-        // Check price has not moved a lot recently. This mitigates price
-        // manipulation during rebalance and also prevents placing orders
-        // when it's too volatile.
-        
-        pool03.checkDeviation(ISorbettoStrategy(strategy).maxTwapDeviation(), ISorbettoStrategy(strategy).twapDuration());
+    function rebalance() external override nonReentrant updateVault(address(0)) checkDeviation {
 
         //Burn all liquidity from pool to rerange for Sorbetto's balances.
         pool03.burnAllLiquidity(tickLower, tickUpper);
@@ -543,6 +525,14 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     // Function modifier that calls update fees reward function
     modifier updateVault(address account) {
         _updateFeesReward(account);
+        _;
+    }
+
+    // Function modifier that checks if price has not moved a lot recently.
+    // This mitigates price manipulation during rebalance and also prevents placing orders
+    // when it's too volatile.
+    modifier checkDeviation() {
+        pool03.checkDeviation(ISorbettoStrategy(strategy).maxTwapDeviation(), ISorbettoStrategy(strategy).twapDuration());
         _;
     }
     
