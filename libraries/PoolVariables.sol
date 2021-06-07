@@ -204,7 +204,7 @@ library PoolVariables {
         (, int24 currentTick, , , , , ) = pool.slot0();
         int24 twap = getTwap(pool, twapDuration);
         int24 deviation = currentTick > twap ? currentTick - twap : twap - currentTick;
-        require(deviation <= maxTwapDeviation, "MTD");
+        require(deviation <= maxTwapDeviation, "PSC");
     }
 
     /// @dev Fetches time-weighted average price in ticks from Uniswap pool for specified duration
