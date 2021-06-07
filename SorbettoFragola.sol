@@ -334,6 +334,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
                 : int256(cache.amount1Desired.sub(cache.amount1).unsafeDiv(2)); // always positive. "overflow" safe convertion cuz we are dividing by 2
 
         // Calculate Price limit depending on price impact
+        // This part of code will be changed soon after testing
         uint256 currentToken0Value = PriceMath.token0ValuePrice(sqrtPriceX96, token0DecimalPower);
         uint256 exactPriceImpact = currentToken0Value.mul(ISorbettoStrategy(strategy).priceImpactPercentage()).unsafeDiv(GLOBAL_DIVISIONER);
         uint256 priceLimit = zeroForOne ? currentToken0Value.sub(exactPriceImpact) : currentToken0Value.add(exactPriceImpact);
