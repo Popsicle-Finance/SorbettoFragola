@@ -9,4 +9,5 @@ A1F - Token 1 amount is bigger than accrued protocol fees
 A0R - Token 0 amount is bigger than accrued rewards
 A1R - Token 1 amount is bigger than accrued rewards
 PG - You are not nominated for Governance
+FP - Only the pool can call this function
 RC - Reentrancy not allowed

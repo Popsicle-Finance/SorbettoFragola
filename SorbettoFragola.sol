@@ -413,8 +413,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         uint256 amount0,
         uint256 amount1,
         bytes calldata data
-    ) external {
-        require(msg.sender == address(pool03));
+    ) external onlyPool {
         MintCallbackData memory decoded = abi.decode(data, (MintCallbackData));
         if (amount0 > 0) pay(token0, decoded.payer, msg.sender, amount0);
         if (amount1 > 0) pay(token1, decoded.payer, msg.sender, amount1);
@@ -429,9 +428,9 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         int256 amount0,
         int256 amount1,
         bytes calldata _data
-    ) external {
-        require(msg.sender == address(pool03));
-        require(amount0 > 0 || amount1 > 0); // swaps entirely within 0-liquidity regions are not supported
+    ) external onlyPool {
+        // swaps entirely within 0-liquidity regions are not supported
+        require(amount0 > 0 || amount1 > 0, "S0L");
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         bool zeroForOne = data.zeroForOne;
 
@@ -531,6 +530,11 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     // when it's too volatile.
     modifier checkDeviation() {
         pool03.checkDeviation(ISorbettoStrategy(strategy).maxTwapDeviation(), ISorbettoStrategy(strategy).twapDuration());
+        _;
+    }
+
+    modifier onlyPool() {
+        require(msg.sender == address(pool03), "FP");
         _;
     }
     
