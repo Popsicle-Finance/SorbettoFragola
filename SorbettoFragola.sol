@@ -22,8 +22,9 @@ import "./interfaces/IsorbettoFragola.sol";
 /// rate. 
 contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     using LowGasSafeMath for uint256;
-    using UnsafeMath for uint256;
+    using LowGasSafeMath for uint160;
     using LowGasSafeMath for uint128;
+    using UnsafeMath for uint256;
     using SafeCast for uint256;
     using PoolVariables for IUniswapV3Pool;
     using PoolActions for IUniswapV3Pool;
@@ -202,8 +203,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         payable
         override
         nonReentrant
-        updateVault(msg.sender)
         checkDeviation
+        updateVault(msg.sender)
         returns (
             uint256 shares,
             uint256 amount0,
@@ -237,8 +238,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         external
         override
         nonReentrant
-        updateVault(msg.sender)
         checkDeviation
+        updateVault(msg.sender)
         returns (
             uint256 amount0,
             uint256 amount1
@@ -255,7 +256,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     }
     
     /// @inheritdoc ISorbettoFragola
-    function rerange() external override nonReentrant updateVault(address(0)) checkDeviation {
+    function rerange() external override nonReentrant checkDeviation updateVault(address(0)) {
 
         //Burn all liquidity from pool to rerange for Sorbetto's balances.
         pool03.burnAllLiquidity(tickLower, tickUpper);
@@ -286,7 +287,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     }
 
     /// @inheritdoc ISorbettoFragola
-    function rebalance() external override nonReentrant updateVault(address(0)) checkDeviation {
+    function rebalance() external override nonReentrant checkDeviation updateVault(address(0))  {
 
         //Burn all liquidity from pool to rerange for Sorbetto's balances.
         pool03.burnAllLiquidity(tickLower, tickUpper);
@@ -316,10 +317,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
                 : int256(cache.amount1Desired.sub(cache.amount1).unsafeDiv(2)); // always positive. "overflow" safe convertion cuz we are dividing by 2
 
         // Calculate Price limit depending on price impact
-        uint256 currentToken0Value = PriceMath.token0ValuePrice(sqrtPriceX96, token0DecimalPower);
-        uint256 exactPriceImpact = currentToken0Value.mul(ISorbettoStrategy(strategy).priceImpactPercentage()).unsafeDiv(GLOBAL_DIVISIONER);
-        uint256 priceLimit = zeroForOne ? currentToken0Value.sub(exactPriceImpact) : currentToken0Value.add(exactPriceImpact);
-        uint160 sqrtPriceLimitX96 = PriceMath.sqrtPriceX96ForToken0Value(priceLimit, token0DecimalPower).toUint160();
+        uint160 exactSqrtPriceImpact = sqrtPriceX96.mul160(ISorbettoStrategy(strategy).priceImpactPercentage() / 2) / 1e6;
+        uint160 sqrtPriceLimitX96 = zeroForOne ?  sqrtPriceX96.sub160(exactSqrtPriceImpact) : sqrtPriceX96.add160(exactSqrtPriceImpact);
 
         //Swap imbalanced token as long as we haven't used the entire amountSpecified and haven't reached the price limit
         pool03.swap(

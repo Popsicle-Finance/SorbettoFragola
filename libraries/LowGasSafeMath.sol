@@ -75,4 +75,28 @@ library LowGasSafeMath {
     function mul128(uint128 x, uint128 y) internal pure returns (uint128 z) {
         require(x == 0 || (z = x * y) / x == y);
     }
+
+    /// @notice Returns x + y, reverts if sum overflows uint128
+    /// @param x The augend
+    /// @param y The addend
+    /// @return z The sum of x and y
+    function add160(uint160 x, uint160 y) internal pure returns (uint160 z) {
+        require((z = x + y) >= x);
+    }
+
+    /// @notice Returns x - y, reverts if underflows
+    /// @param x The minuend
+    /// @param y The subtrahend
+    /// @return z The difference of x and y
+    function sub160(uint160 x, uint160 y) internal pure returns (uint160 z) {
+        require((z = x - y) <= x);
+    }
+
+    /// @notice Returns x * y, reverts if overflows
+    /// @param x The multiplicand
+    /// @param y The multiplier
+    /// @return z The product of x and y
+    function mul160(uint160 x, uint160 y) internal pure returns (uint160 z) {
+        require(x == 0 || (z = x * y) / x == y);
+    }
 }
