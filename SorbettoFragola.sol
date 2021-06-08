@@ -110,7 +110,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     
     /// @notice Prevents calls from users
     modifier onlyGovernance {
-        require(msg.sender == governance, "NA");
+        require(msg.sender == governance, "OG");
         _;
     }
     
@@ -470,8 +470,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         uint256 amount0,
         uint256 amount1
     ) external nonReentrant onlyGovernance updateVault(address(0)) {
-        require(accruedProtocolFees0 >= amount0, "A0");
-        require(accruedProtocolFees1 >= amount1, "A1");
+        require(accruedProtocolFees0 >= amount0, "A0F");
+        require(accruedProtocolFees1 >= amount1, "A1F");
         
         uint256 balance0 = _balance0();
         uint256 balance1 = _balance1();
@@ -499,8 +499,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     function collectFees(uint256 amount0, uint256 amount1) external updateVault(msg.sender) {
         UserInfo storage user = userInfo[msg.sender];
 
-        require(user.token0Rewards >= amount0, "A0");
-        require(user.token1Rewards >= amount1, "A1");
+        require(user.token0Rewards >= amount0, "A0R");
+        require(user.token1Rewards >= amount1, "A1R");
 
         uint256 balance0 = _balance0();
         uint256 balance1 = _balance1();
