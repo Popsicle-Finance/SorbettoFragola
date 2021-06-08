@@ -542,8 +542,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         (uint256 collect0, uint256 collect1) = _earnFees();
         
         
-        token0PerShareStored = _token0PerShare(collect0);
-        token1PerShareStored = _token1PerShare(collect1);
+        token0PerShareStored = _tokenPerShare(collect0, token0PerShareStored);
+        token1PerShareStored = _tokenPerShare(collect1, token1PerShareStored);
 
         if (account != address(0)) {
             UserInfo storage user = userInfo[msg.sender];
@@ -575,32 +575,18 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
             .add(user.token1Rewards);
     }
     
-    // Calculates how much token0 is provied per LP token 
-    function _token0PerShare(uint256 collected0) internal view returns (uint256) {
+    // Calculates how much token is provided per LP token 
+    function _tokenPerShare(uint256 collected, uint256 tokenPerShareStored) internal view returns (uint256) {
         uint _totalSupply = totalSupply();
         if (_totalSupply > 0) {
-            return token0PerShareStored
+            return tokenPerShareStored
             .add(
-                collected0
+                collected
                 .mul(1e18)
                 .unsafeDiv(_totalSupply)
             );
         }
-        return token0PerShareStored;
-    }
-    
-    // Calculates how much token1 is provied per LP token 
-    function _token1PerShare(uint256 collected1) internal view returns (uint256) {
-        uint _totalSupply = totalSupply();
-        if (_totalSupply > 0) {
-            return token1PerShareStored
-            .add(
-                collected1
-                .mul(1e18)
-                .unsafeDiv(_totalSupply)
-            );
-        }
-        return token1PerShareStored;
+        return tokenPerShareStored;
     }
     
     /// @notice Refunds any ETH balance held by this contract to the `msg.sender`
