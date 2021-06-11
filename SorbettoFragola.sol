@@ -287,7 +287,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     }
 
     /// @inheritdoc ISorbettoFragola
-    function rebalance() external override nonReentrant checkDeviation updateVault(address(0))  {
+    function rebalance() external override onlyGovernance nonReentrant checkDeviation updateVault(address(0))  {
 
         //Burn all liquidity from pool to rerange for Sorbetto's balances.
         pool03.burnAllLiquidity(tickLower, tickUpper);
