@@ -11,3 +11,14 @@ A1R - Token 1 amount is bigger than accrued rewards
 PG - You are not nominated for Governance
 FP - Only the pool can call this function
 RC - Reentrancy not allowed
+TS - Invalid Total Supply (needs to be bigger than zero)
+TML - Liquidity burn is bigger than liquidity in pool
+FZA - Sender cannot be the zero address
+TZA - Transfer recipient cannot be the zero address
+MZA - Mint account cannot be the zero address
+BZA - Burn account cannot be the zero address
+AFZA - Approve owner cannot be the zero address
+ATZA - Approve spender cannot be the zero address
+STF - Safe transfer from failed
+ST - Safe transfer failed
+SET - Safe ETH transfer failed
