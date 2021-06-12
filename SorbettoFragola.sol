@@ -18,7 +18,7 @@ import "./interfaces/IsorbettoFragola.sol";
 /// @dev Sorbetto fragola is a Uniswap V3 yield enchancement contract which acts as
 /// intermediary between the user who wants to provide liquidity to specific pools
 /// and earn fees from such actions. The contract ensures that user position is in 
-/// range and earns maximum amount of fess available at current liquidity utilization
+/// range and earns maximum amount of fees available at current liquidity utilization
 /// rate. 
 contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     using LowGasSafeMath for uint256;
