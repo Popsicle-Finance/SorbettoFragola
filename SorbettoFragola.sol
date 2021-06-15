@@ -110,7 +110,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     
     /// @notice Prevents calls from users
     modifier onlyGovernance {
-        require(msg.sender == governance, "NA");
+        require(msg.sender == governance, "OG");
         _;
     }
     
@@ -414,7 +414,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         uint256 amount1,
         bytes calldata data
     ) external {
-        require(msg.sender == address(pool03));
+        require(msg.sender == address(pool03), "FP");
         MintCallbackData memory decoded = abi.decode(data, (MintCallbackData));
         if (amount0 > 0) pay(token0, decoded.payer, msg.sender, amount0);
         if (amount1 > 0) pay(token1, decoded.payer, msg.sender, amount1);
@@ -430,7 +430,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         int256 amount1,
         bytes calldata _data
     ) external {
-        require(msg.sender == address(pool03));
+        require(msg.sender == address(pool03), "FP");
         require(amount0 > 0 || amount1 > 0); // swaps entirely within 0-liquidity regions are not supported
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         bool zeroForOne = data.zeroForOne;
@@ -470,8 +470,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         uint256 amount0,
         uint256 amount1
     ) external nonReentrant onlyGovernance updateVault(address(0)) {
-        require(accruedProtocolFees0 >= amount0, "A0");
-        require(accruedProtocolFees1 >= amount1, "A1");
+        require(accruedProtocolFees0 >= amount0, "A0F");
+        require(accruedProtocolFees1 >= amount1, "A1F");
         
         uint256 balance0 = _balance0();
         uint256 balance1 = _balance1();
@@ -499,8 +499,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     function collectFees(uint256 amount0, uint256 amount1) external updateVault(msg.sender) {
         UserInfo storage user = userInfo[msg.sender];
 
-        require(user.token0Rewards >= amount0, "A0");
-        require(user.token1Rewards >= amount1, "A1");
+        require(user.token0Rewards >= amount0, "A0R");
+        require(user.token1Rewards >= amount1, "A1R");
 
         uint256 balance0 = _balance0();
         uint256 balance1 = _balance1();
@@ -541,8 +541,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         (uint256 collect0, uint256 collect1) = _earnFees();
         
         
-        token0PerShareStored = _token0PerShare(collect0);
-        token1PerShareStored = _token1PerShare(collect1);
+        token0PerShareStored = _tokenPerShare(collect0, token0PerShareStored);
+        token1PerShareStored = _tokenPerShare(collect1, token1PerShareStored);
 
         if (account != address(0)) {
             UserInfo storage user = userInfo[msg.sender];
@@ -574,32 +574,18 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
             .add(user.token1Rewards);
     }
     
-    // Calculates how much token0 is provied per LP token 
-    function _token0PerShare(uint256 collected0) internal view returns (uint256) {
+    // Calculates how much token is provided per LP token 
+    function _tokenPerShare(uint256 collected, uint256 tokenPerShareStored) internal view returns (uint256) {
         uint _totalSupply = totalSupply();
         if (_totalSupply > 0) {
-            return token0PerShareStored
+            return tokenPerShareStored
             .add(
-                collected0
+                collected
                 .mul(1e18)
                 .unsafeDiv(_totalSupply)
             );
         }
-        return token0PerShareStored;
-    }
-    
-    // Calculates how much token1 is provied per LP token 
-    function _token1PerShare(uint256 collected1) internal view returns (uint256) {
-        uint _totalSupply = totalSupply();
-        if (_totalSupply > 0) {
-            return token1PerShareStored
-            .add(
-                collected1
-                .mul(1e18)
-                .unsafeDiv(_totalSupply)
-            );
-        }
-        return token1PerShareStored;
+        return tokenPerShareStored;
     }
     
     /// @notice Refunds any ETH balance held by this contract to the `msg.sender`

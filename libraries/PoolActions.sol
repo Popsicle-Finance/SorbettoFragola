@@ -70,7 +70,7 @@ library PoolActions {
         address to
     ) internal returns (uint256 amount0, uint256 amount1) {
         uint128 liquidityInPool = pool.positionLiquidity(tickLower, tickUpper);
-        require(liquidityInPool >= liquidity);
+        require(liquidityInPool >= liquidity, "TML");
         (amount0, amount1) = pool.burn(tickLower, tickUpper, liquidity);
 
         if (amount0 > 0 || amount1 > 0) {
