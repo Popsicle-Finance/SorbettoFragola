@@ -107,6 +107,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     /// @param totalAmount0 Current token0 Sorbetto's balance
     /// @param totalAmount1 Current token1 Sorbetto's balance
     event Snapshot(uint256 totalAmount0, uint256 totalAmount1);
+
+    event TransferGovernance(address indexed previousGovernance, address indexed newGovernance);
     
     /// @notice Prevents calls from users
     modifier onlyGovernance {
@@ -191,6 +193,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         
         tickLower = tickFloor - baseThreshold;
         tickUpper = tickFloor + baseThreshold;
+        PoolVariables.checkRange(tickLower, tickUpper); //check ticks also for overflow/underflow
         universalMultiplier = PriceMath.token0ValuePrice(sqrtPriceX96, token0DecimalPower);
     }
     
@@ -223,7 +226,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
             liquidity,
             abi.encode(MintCallbackData({payer: msg.sender})));
 
-        shares = _calcShare(amount0, amount1);
+        shares = amount0.mul(universalMultiplier).unsafeDiv(token1DecimalPower).add(amount1.mul(1e12));
 
         _mint(msg.sender, shares);
         require(totalSupply() <= maxTotalSupply, "MTS");
@@ -349,17 +352,6 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
             cache.liquidity,
             abi.encode(MintCallbackData({payer: address(this)})));
         emit Rerange(tickLower, tickUpper, cache.amount0, cache.amount1);
-    }
-
-    // Calcs user share depending on deposited amounts
-    function _calcShare(uint256 amount0Desired, uint256 amount1Desired)
-        internal
-        view
-        returns (
-            uint256 shares
-        )
-    {
-        shares = amount0Desired.mul(universalMultiplier).unsafeDiv(token1DecimalPower).add(amount1Desired.mul(1e12)); // Mul(1e12) Recalculated to match precisions
     }
     
     /// @dev Amount of token0 held as unused balance.
@@ -496,7 +488,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     /**
      * @notice Used to withdraw accumulated user's fees.
      */
-    function collectFees(uint256 amount0, uint256 amount1) external updateVault(msg.sender) {
+    function collectFees(uint256 amount0, uint256 amount1) external nonReentrant updateVault(msg.sender) {
         UserInfo storage user = userInfo[msg.sender];
 
         require(user.token0Rewards >= amount0, "A0R");
@@ -609,6 +601,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
      */
     function acceptGovernance() external {
         require(msg.sender == pendingGovernance, "PG");
+        emit TransferGovernance(governance, pendingGovernance);
+        pendingGovernance = address(0);
         governance = msg.sender;
     }
 

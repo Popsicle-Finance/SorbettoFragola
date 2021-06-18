@@ -41,7 +41,7 @@ library PoolActions {
 
             if (amount0 > 0 || amount1 > 0) {
             // collect liquidity share
-                (amount0, amount0) = pool.collect(
+                (amount0, amount1) = pool.collect(
                     to,
                     tickLower,
                     tickUpper,
