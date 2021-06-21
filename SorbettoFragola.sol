@@ -226,7 +226,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
             liquidity,
             abi.encode(MintCallbackData({payer: msg.sender})));
 
-        shares = amount0.mul(universalMultiplier).unsafeDiv(token1DecimalPower).add(amount1.mul(1e12));
+        shares = _calcShare(liquidity);
 
         _mint(msg.sender, shares);
         require(totalSupply() <= maxTotalSupply, "MTS");
@@ -352,6 +352,17 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
             cache.liquidity,
             abi.encode(MintCallbackData({payer: address(this)})));
         emit Rerange(tickLower, tickUpper, cache.amount0, cache.amount1);
+    }
+
+    // Calcs user share depending on deposited amounts
+    function _calcShare(uint128 liquidity)
+        internal
+        view
+        returns (
+            uint256 shares
+        )
+    {
+        shares = totalSupply() == 0 ? uint256(liquidity) : uint256(liquidity).mul(totalSupply()).unsafeDiv(uint256(pool03.positionLiquidity(tickLower, tickUpper)));
     }
     
     /// @dev Amount of token0 held as unused balance.
