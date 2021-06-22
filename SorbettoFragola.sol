@@ -120,8 +120,6 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
 
     // token 0 fraction
     uint256 public immutable token0DecimalPower = 1e18; //WETH
-    // token 1 fraction
-    uint256 public immutable token1DecimalPower = 1e6; //USDT
     /// @inheritdoc ISorbettoFragola
     address public immutable override token0;
     /// @inheritdoc ISorbettoFragola
@@ -148,8 +146,6 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     uint256 public token0PerShareStored;
     // intermediate variable for user fee token1 calculation
     uint256 public token1PerShareStored;
-    //Universal multiplier used to properly calculate user share
-    uint256 public override universalMultiplier;
     
     // Address of the Sorbetto's owner
     address public governance;
@@ -188,13 +184,12 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         require(!finalized, "F");
         finalized = true;
         int24 baseThreshold = tickSpacing * ISorbettoStrategy(strategy).tickRangeMultiplier();
-        (uint160 sqrtPriceX96, int24 currentTick, , , , , ) = pool03.slot0();
+        ( , int24 currentTick, , , , , ) = pool03.slot0();
         int24 tickFloor = PoolVariables.floor(currentTick, tickSpacing);
         
         tickLower = tickFloor - baseThreshold;
         tickUpper = tickFloor + baseThreshold;
         PoolVariables.checkRange(tickLower, tickUpper); //check ticks also for overflow/underflow
-        universalMultiplier = PriceMath.token0ValuePrice(sqrtPriceX96, token0DecimalPower);
     }
     
     /// @inheritdoc ISorbettoFragola

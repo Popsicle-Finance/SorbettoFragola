@@ -25,10 +25,6 @@ interface ISorbettoFragola {
     /// @return The address of the Uniswap V3 Pool
     function pool03() external view returns (IUniswapV3Pool);
 
-    /// @notice Universal multiplier to calc shares for all users
-    /// @return universal multiplier
-    function universalMultiplier() external view returns (uint256);
-
     /// @notice The lower tick of the range
     function tickLower() external view returns (int24);
 

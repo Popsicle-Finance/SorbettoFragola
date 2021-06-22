@@ -1,4 +1,5 @@
 .vscode/
+./libraries/PriceMath.sol
 
 # Local Compile files
 bin/
