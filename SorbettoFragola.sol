@@ -9,7 +9,6 @@ import './libraries/TransferHelper.sol';
 import "./libraries/SqrtPriceMath.sol";
 import "./base/ERC20Permit.sol";
 import "./libraries/Babylonian.sol";
-import "./libraries/PriceMath.sol";
 import "./libraries/PoolActions.sol";
 import "./interfaces/ISorbettoStrategy.sol";
 import "./interfaces/IsorbettoFragola.sol";
@@ -117,9 +116,6 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     }
     
     mapping(address => UserInfo) public userInfo; // Info of each user that provides liquidity tokens.
-
-    // token 0 fraction
-    uint256 public immutable token0DecimalPower = 1e18; //WETH
     /// @inheritdoc ISorbettoFragola
     address public immutable override token0;
     /// @inheritdoc ISorbettoFragola
