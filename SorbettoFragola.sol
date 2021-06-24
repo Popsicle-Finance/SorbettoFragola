@@ -127,9 +127,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     uint24 immutable GLOBAL_DIVISIONER = 1e6; // for basis point (0.0001%)
 
     // @inheritdoc ISorbettoFragola
-    IUniswapV3Pool public override pool03;
-    // Maximum total supply of the PLP (69M)
-    uint256 public maxTotalSupply;
+    IUniswapV3Pool public override pool;
     // Accrued protocol fees in terms of token0
     uint256 public accruedProtocolFees0;
     // Accrued protocol fees in terms of token1
@@ -158,21 +156,18 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     
     /**
      * @dev After deploying, strategy can be set via `setStrategy()`
-     * @param _pool03 Underlying Uniswap V3 pool with fee = 3000
+     * @param _pool Underlying Uniswap V3 pool with fee = 3000
      * @param _strategy Underlying Sorbetto Strategy for Sorbetto settings
-     * @param _maxTotalSupply max total supply of PLP
      */
      constructor(
-        address _pool03,
-        address _strategy,
-        uint256 _maxTotalSupply
+        address _pool,
+        address _strategy
     ) ERC20("Popsicle LP V3 WETH/USDT", "PLP") ERC20Permit("Popsicle LP V3 WETH/USDT") {
-        pool03 = IUniswapV3Pool(_pool03);
+        pool = IUniswapV3Pool(_pool);
         strategy = _strategy;
-        token0 = pool03.token0();
-        token1 = pool03.token1();
-        tickSpacing = pool03.tickSpacing();
-        maxTotalSupply = _maxTotalSupply;
+        token0 = pool.token0();
+        token1 = pool.token1();
+        tickSpacing = pool.tickSpacing();
         governance = msg.sender;
     }
     //initialize strategy
@@ -180,7 +175,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         require(!finalized, "F");
         finalized = true;
         int24 baseThreshold = tickSpacing * ISorbettoStrategy(strategy).tickRangeMultiplier();
-        ( , int24 currentTick, , , , , ) = pool03.slot0();
+        ( , int24 currentTick, , , , , ) = pool.slot0();
         int24 tickFloor = PoolVariables.floor(currentTick, tickSpacing);
         
         tickLower = tickFloor - baseThreshold;
@@ -208,9 +203,9 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         require(amount0Desired > 0 && amount1Desired > 0, "ANV");
 
         // compute the liquidity amount
-        uint128 liquidity = pool03.liquidityForAmounts(amount0Desired, amount1Desired, tickLower, tickUpper);
+        uint128 liquidity = pool.liquidityForAmounts(amount0Desired, amount1Desired, tickLower, tickUpper);
         
-        (amount0, amount1) = pool03.mint(
+        (amount0, amount1) = pool.mint(
             address(this),
             tickLower,
             tickUpper,
@@ -220,7 +215,6 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         shares = _calcShare(liquidity);
 
         _mint(msg.sender, shares);
-        require(totalSupply() <= maxTotalSupply, "MTS");
         refundETH();
         emit Deposit(msg.sender, shares, amount0, amount1);
     }
@@ -242,7 +236,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         require(shares > 0, "S");
 
 
-        (amount0, amount1) = pool03.burnLiquidityShare(tickLower, tickUpper, totalSupply(), shares,  msg.sender);
+        (amount0, amount1) = pool.burnLiquidityShare(tickLower, tickUpper, totalSupply(), shares,  msg.sender);
         
         // Burn shares
         _burn(msg.sender, shares);
@@ -253,7 +247,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     function rerange() external override nonReentrant checkDeviation updateVault(address(0)) {
 
         //Burn all liquidity from pool to rerange for Sorbetto's balances.
-        pool03.burnAllLiquidity(tickLower, tickUpper);
+        pool.burnAllLiquidity(tickLower, tickUpper);
         
 
         // Emit snapshot to record balances
@@ -264,13 +258,13 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         int24 baseThreshold = tickSpacing * ISorbettoStrategy(strategy).tickRangeMultiplier();
 
         //Get exact ticks depending on Sorbetto's balances
-        (tickLower, tickUpper) = pool03.getPositionTicks(balance0, balance1, baseThreshold, tickSpacing);
+        (tickLower, tickUpper) = pool.getPositionTicks(balance0, balance1, baseThreshold, tickSpacing);
 
         //Get Liquidity for Sorbetto's balances
-        uint128 liquidity = pool03.liquidityForAmounts(balance0, balance1, tickLower, tickUpper);
+        uint128 liquidity = pool.liquidityForAmounts(balance0, balance1, tickLower, tickUpper);
         
         // Add liquidity to the pool
-        (uint256 amount0, uint256 amount1) = pool03.mint(
+        (uint256 amount0, uint256 amount1) = pool.mint(
             address(this),
             tickLower,
             tickUpper,
@@ -284,10 +278,10 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     function rebalance() external override onlyGovernance nonReentrant checkDeviation updateVault(address(0))  {
 
         //Burn all liquidity from pool to rerange for Sorbetto's balances.
-        pool03.burnAllLiquidity(tickLower, tickUpper);
+        pool.burnAllLiquidity(tickLower, tickUpper);
         
         //Calc base ticks
-        (uint160 sqrtPriceX96, int24 currentTick, , , , , ) = pool03.slot0();
+        (uint160 sqrtPriceX96, int24 currentTick, , , , , ) = pool.slot0();
         PoolVariables.Info memory cache = 
             PoolVariables.Info(0, 0, 0, 0, 0, 0, 0);
         int24 baseThreshold = tickSpacing * ISorbettoStrategy(strategy).tickRangeMultiplier();
@@ -297,10 +291,10 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         cache.amount1Desired = _balance1();
         emit Snapshot(cache.amount0Desired, cache.amount1Desired);
         // Calc liquidity for base ticks
-        cache.liquidity = pool03.liquidityForAmounts(cache.amount0Desired, cache.amount1Desired, cache.tickLower, cache.tickUpper);
+        cache.liquidity = pool.liquidityForAmounts(cache.amount0Desired, cache.amount1Desired, cache.tickLower, cache.tickUpper);
 
         // Get exact amounts for base ticks
-        (cache.amount0, cache.amount1) = pool03.amountsForLiquidity(cache.liquidity, cache.tickLower, cache.tickUpper);
+        (cache.amount0, cache.amount1) = pool.amountsForLiquidity(cache.liquidity, cache.tickLower, cache.tickUpper);
 
         // Get imbalanced token
         bool zeroForOne = PoolVariables.amountsDirection(cache.amount0Desired, cache.amount1Desired, cache.amount0, cache.amount1);
@@ -315,7 +309,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         uint160 sqrtPriceLimitX96 = zeroForOne ?  sqrtPriceX96.sub160(exactSqrtPriceImpact) : sqrtPriceX96.add160(exactSqrtPriceImpact);
 
         //Swap imbalanced token as long as we haven't used the entire amountSpecified and haven't reached the price limit
-        pool03.swap(
+        pool.swap(
             address(this),
             zeroForOne,
             amountSpecified,
@@ -324,19 +318,19 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         );
 
 
-        (sqrtPriceX96, currentTick, , , , , ) = pool03.slot0();
+        (sqrtPriceX96, currentTick, , , , , ) = pool.slot0();
 
         // Emit snapshot to record balances
         cache.amount0Desired = _balance0();
         cache.amount1Desired = _balance1();
         emit Snapshot(cache.amount0Desired, cache.amount1Desired);
         //Get exact ticks depending on Sorbetto's new balances
-        (tickLower, tickUpper) = pool03.getPositionTicks(cache.amount0Desired, cache.amount1Desired, baseThreshold, tickSpacing);
+        (tickLower, tickUpper) = pool.getPositionTicks(cache.amount0Desired, cache.amount1Desired, baseThreshold, tickSpacing);
 
-        cache.liquidity = pool03.liquidityForAmounts(cache.amount0Desired, cache.amount1Desired, tickLower, tickUpper);
+        cache.liquidity = pool.liquidityForAmounts(cache.amount0Desired, cache.amount1Desired, tickLower, tickUpper);
 
         // Add liquidity to the pool
-        (cache.amount0, cache.amount1) = pool03.mint(
+        (cache.amount0, cache.amount1) = pool.mint(
             address(this),
             tickLower,
             tickUpper,
@@ -353,7 +347,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
             uint256 shares
         )
     {
-        shares = totalSupply() == 0 ? uint256(liquidity) : uint256(liquidity).mul(totalSupply()).unsafeDiv(uint256(pool03.positionLiquidity(tickLower, tickUpper)));
+        shares = totalSupply() == 0 ? uint256(liquidity) : uint256(liquidity).mul(totalSupply()).unsafeDiv(uint256(pool.positionLiquidity(tickLower, tickUpper)));
     }
     
     /// @dev Amount of token0 held as unused balance.
@@ -369,10 +363,10 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     /// @dev collects fees from the pool
     function _earnFees() internal returns (uint256 userCollect0, uint256 userCollect1) {
          // Do zero-burns to poke the Uniswap pools so earned fees are updated
-        pool03.burn(tickLower, tickUpper, 0);
+        pool.burn(tickLower, tickUpper, 0);
         
         (uint256 collect0, uint256 collect1) =
-            pool03.collect(
+            pool.collect(
                 address(this),
                 tickLower,
                 tickUpper,
@@ -395,7 +389,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     /// @notice Returns current Sorbetto's position in pool
     function position() external view returns (uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, uint128 tokensOwed0, uint128 tokensOwed1) {
         bytes32 positionKey = PositionKey.compute(address(this), tickLower, tickUpper);
-        (liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) = pool03.positions(positionKey);
+        (liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) = pool.positions(positionKey);
     }
     
     /// @notice Pull in tokens from sender. Called to `msg.sender` after minting liquidity to a position from IUniswapV3Pool#mint.
@@ -408,7 +402,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         uint256 amount1,
         bytes calldata data
     ) external {
-        require(msg.sender == address(pool03), "FP");
+        require(msg.sender == address(pool), "FP");
         MintCallbackData memory decoded = abi.decode(data, (MintCallbackData));
         if (amount0 > 0) pay(token0, decoded.payer, msg.sender, amount0);
         if (amount1 > 0) pay(token1, decoded.payer, msg.sender, amount1);
@@ -424,7 +418,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         int256 amount1,
         bytes calldata _data
     ) external {
-        require(msg.sender == address(pool03), "FP");
+        require(msg.sender == address(pool), "FP");
         require(amount0 > 0 || amount1 > 0); // swaps entirely within 0-liquidity regions are not supported
         SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
         bool zeroForOne = data.zeroForOne;
@@ -477,8 +471,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         }
         else
         {
-            uint128 liquidity = pool03.liquidityForAmounts(amount0, amount1, tickLower, tickUpper);
-            pool03.burnExactLiquidity(tickLower, tickUpper, liquidity, msg.sender);
+            uint128 liquidity = pool.liquidityForAmounts(amount0, amount1, tickLower, tickUpper);
+            pool.burnExactLiquidity(tickLower, tickUpper, liquidity, msg.sender);
         
         }
         
@@ -506,8 +500,8 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         }
         else {
             
-            uint128 liquidity = pool03.liquidityForAmounts(amount0, amount1, tickLower, tickUpper);
-            (amount0, amount1) = pool03.burnExactLiquidity(tickLower, tickUpper, liquidity, msg.sender);
+            uint128 liquidity = pool.liquidityForAmounts(amount0, amount1, tickLower, tickUpper);
+            (amount0, amount1) = pool.burnExactLiquidity(tickLower, tickUpper, liquidity, msg.sender);
         }
         user.token0Rewards = user.token0Rewards.sub(amount0);
         user.token1Rewards = user.token1Rewards.sub(amount1);
@@ -524,13 +518,13 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     // This mitigates price manipulation during rebalance and also prevents placing orders
     // when it's too volatile.
     modifier checkDeviation() {
-        pool03.checkDeviation(ISorbettoStrategy(strategy).maxTwapDeviation(), ISorbettoStrategy(strategy).twapDuration());
+        pool.checkDeviation(ISorbettoStrategy(strategy).maxTwapDeviation(), ISorbettoStrategy(strategy).twapDuration());
         _;
     }
     
     // Updates user's fees reward
     function _updateFeesReward(address account) internal {
-        uint liquidity = pool03.positionLiquidity(tickLower, tickUpper);
+        uint liquidity = pool.positionLiquidity(tickLower, tickUpper);
         if (liquidity == 0) return; // we can't poke when liquidity is zero
         (uint256 collect0, uint256 collect1) = _earnFees();
         
@@ -606,11 +600,6 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         emit TransferGovernance(governance, pendingGovernance);
         pendingGovernance = address(0);
         governance = msg.sender;
-    }
-
-    // Sets maximum total supply of the PLP
-    function setMaxTotalSupply(uint256 _maxTotalSupply) external onlyGovernance {
-        maxTotalSupply = _maxTotalSupply;
     }
 
     // Sets new strategy contract address for new settings

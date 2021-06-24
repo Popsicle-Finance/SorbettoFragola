@@ -23,7 +23,7 @@ interface ISorbettoFragola {
     /// @notice A Uniswap pool facilitates swapping and automated market making between any two assets that strictly conform
     /// to the ERC20 specification
     /// @return The address of the Uniswap V3 Pool
-    function pool03() external view returns (IUniswapV3Pool);
+    function pool() external view returns (IUniswapV3Pool);
 
     /// @notice The lower tick of the range
     function tickLower() external view returns (int24);
