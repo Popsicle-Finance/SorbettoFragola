@@ -162,7 +162,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
      constructor(
         address _pool,
         address _strategy
-    ) ERC20("Popsicle LP V3 WETH/USDT", "PLP") ERC20Permit("Popsicle LP V3 WETH/USDT") {
+    ) ERC20("Popsicle LP V3 USDT/WETH", "PLP") ERC20Permit("Popsicle LP V3 USDT/WETH") {
         pool = IUniswapV3Pool(_pool);
         strategy = _strategy;
         token0 = pool.token0();
@@ -201,7 +201,7 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
         )
     {
         require(amount0Desired > 0 && amount1Desired > 0, "ANV");
-
+        uint128 liquidityLast = pool.positionLiquidity(tickLower, tickUpper);
         // compute the liquidity amount
         uint128 liquidity = pool.liquidityForAmounts(amount0Desired, amount1Desired, tickLower, tickUpper);
         
@@ -211,8 +211,9 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
             tickUpper,
             liquidity,
             abi.encode(MintCallbackData({payer: msg.sender})));
-
-        shares = _calcShare(liquidity);
+        
+        
+        shares = _calcShare(liquidity, liquidityLast);
 
         _mint(msg.sender, shares);
         refundETH();
@@ -340,14 +341,14 @@ contract SorbettoFragola is ERC20Permit, ReentrancyGuard, ISorbettoFragola {
     }
 
     // Calcs user share depending on deposited amounts
-    function _calcShare(uint128 liquidity)
+    function _calcShare(uint128 liquidity, uint128 liquidityLast)
         internal
         view
         returns (
             uint256 shares
         )
     {
-        shares = totalSupply() == 0 ? uint256(liquidity) : uint256(liquidity).mul(totalSupply()).unsafeDiv(uint256(pool.positionLiquidity(tickLower, tickUpper)));
+        shares = totalSupply() == 0 ? uint256(liquidity) : uint256(liquidity).mul(totalSupply()).unsafeDiv(uint256(liquidityLast));
     }
     
     /// @dev Amount of token0 held as unused balance.
